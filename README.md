@@ -46,11 +46,79 @@ bash ../../src/sort-kmers.sh 15 ~/data/mitogenomes/set_1
 
 __Identify conserved kmers__
 
-The script src/conserved-kmers.sh isolates kmers found in all the species and saves them to the file conserved_kmers.txt. Run it from the results/jellyfish folder.
+The script src/find-conserved-kmers.sh isolates kmers found in all the species and saves them to the file conserved_kmers.txt. Run it from the results/jellyfish folder.
 
 ~~~
-bash ../../src/conserved-kmers.sh
+bash ../../src/find-conserved-kmers.sh
 ~~~
 
+The conserved sequences were saved to the file [results/jellyfish/conserved_kmers.txt](results/jellyfish/conserved_kmers.txt).
 
+## Filtering for effective primer pairs
+
+### Isolating effective primer pairs with in_silico_PCR
+
+Next, we identified potential amplification products from using the conserved sequences as primer binding sites.
+
+This was done using [in_silico_pcr](https://github.com/egonozer/in_silico_pcr) which simply extracts sequences surounded by the primer binding sites, and setting the maximum length of the product to 500 bp.
+
+__Installing in_silico_PCR__
+
+To make in_silico_pcr executable from the command line the folder it was cloned to was added to PATH in the ~/.bashrc script,
+
+~~~
+export PATH=/home/laniel/tools:${PATH}
+~~~
+
+and the following command was run,
+
+~~~
+chmod +x ~/tools/bioinformatics/in_silico_pcr/in_silico_PCR.pl
+~~~
+
+__Test run of in_silico_PCR__
+
+The program was run from the results/in_silico_PCR folder.
+
+As an initial test conserved sequence 5 was run with the reverse complement of conserved sequence 3.
+
+~~~
+in_silico_PCR.pl -s ~/data/mitogenomes/set_1/sminthopsis-crassicaudata.fasta -a CAAACTGGGATTAGA -b AGGGTGACGGGCGGT -l 500
+~~~
+
+This resulted in a 433 bp in silico amplification product.
+
+__Python script for combining all primers__
+
+The script [combine-primers.py](src/combine-primers.py) was written to create a table of two columns pairing every conserved kmer with the reverse complement of every other kmer.
+
+A tsv file with all primer pairs were generated with the following command:
+
+~~~
+python3 src/combine-primers.py results/jellyfish/conserved_kmers.txt > results/in_silico_PCR/primer_pairs.tsv
+~~~
+
+__Identifying primer pairs that give amplification products with in_silico_PCR__
+
+in_silico_PCR was run from the results/in_silico_PCR folder on all primer pairs with the following command:
+
+~~~
+in_silico_PCR.pl -s ~/data/mitogenomes/set_1/sminthopsis-crassicaudata.fasta -p primer_pairs.tsv -l 500 | sed '/No amplification/d' | sed '/>/d' > amplifications.tsv
+~~~
+
+The primer pairs that gave amplifications were saved along with their name and product length to effective_primer_pairs.tsv with the python script [format-effective-primer-pairs-for-ribdif.py]().
+
+~~~
+python3 src/format-effective-primer-pairs-for-ribdif.py results/in_silico_PCR/amplifications.tsv results/in_silico_PCR/primer_pairs.tsv results/ribdif2/effective_primer_pairs.tsv
+~~~
+
+## Determining amplicon species resolution with RibDif2
+
+RibDif2 was run on the set of mitogenomes specified with the primers identified in the previous step.
+
+~~~
+ribdif -u ~/data/mitogenomes/set_1 -p results/ribdif2/effective_primer_pairs.tsv
+~~~
+
+## Compiling the code to run on any folder of mitogenomes
 
