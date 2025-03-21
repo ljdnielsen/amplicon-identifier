@@ -120,5 +120,78 @@ RibDif2 was run on the set of mitogenomes specified with the primers identified 
 ribdif -u ~/data/mitogenomes/set_1 -p results/ribdif2/effective_primer_pairs.tsv
 ~~~
 
-## Compiling the code to run on any folder of mitogenomes
+## Comparing tree topologies of amplicons with mitogenomes
+
+__Move amplicon fastas to fastree folder__
+
+First the fasta files with the resulting amplicons of each primer pair was moved to the folder results/fasttree/amplicons.
+
+This was done by looping through the ribdif2 primer-pair folders and copying the amplicon fastas using the script copy-amplicon-fasta.sh.
+
+~~~
+bash src/copy-amplicon-fasta.sh
+~~~
+
+__Rename sequence names of amplicon fastas to those of the mitogenomes__
+
+The headers of the amplicon fastas were renamed to match the headers of the mitogenome file using the script src/rename-fasta-headers.py
+
+~~~
+python3 src/rename-fasta-headers.py -r ~/data/mitogenomes/set_1.fasta -i results/fasttree/amplicons
+~~~
+
+__Create a tree for the mitogenomes and every primer pair__
+
+First fasttree was installed into a new environment.
+
+~~~
+conda create -n fasttree
+conda activate fasttree
+mamba install -c bioconda fasttree
+~~~
+
+Then the script generate-trees.sh was used to create phylogenetic trees from the amplicon fastas for each primer pair and the mitogenomes fasta.
+
+~~~
+bash src/generate-trees.sh ~/data/mitogenomes/set_1.fasta results/fasttree/amplicons/ results/fasttree
+~~~
+
+__Find the amplicon tree with the topology most similar to the mitogenome tree__
+
+To find the primer pair that creates the best amplicons for delineating the focal species their topologies were compared with that of the mitogenome tree using the Robinson-Foulds distance.
+
+This was done using the script src/compare-rf.py.
+
+First an environment with biopython and dendropy was created.
+
+~~~
+conda create -n compare-rf
+conda activate compare-rf
+mamba install -c bioconda dendropy
+mamba install -c bioconda biopython
+~~~
+
+The tree topologies were then compared with the command:
+
+~~~
+python3 src/compare-rf.py results/fasttree/mitogenome_tree.nwk results/fasttree/amplicon_trees/
+~~~
+
+### Blasting amplicons against NCBI database
+
+A local version of the NCBI refseq genome database was created in a local data folder to blast the amplicons against.
+
+~~~
+cd ~/data/ncbi_refseq
+wget ftp://ftp.ncbi.nlm.nih.gov/refseq/release/mitochondrion/*.fna.gz
+gunzip *.fna.gz
+cat *.fna > refseq_mito.fasta
+makeblastdb -in refseq_mito.fasta -dbtype nucl -out refseq_mito_db
+~~~
+
+Then the amplicons of the best matching tree were blasted against NCBI's refseq genomes database and the result saved to results/blastn/set_1-primer_pair95.blast-hits.txt
+
+~~~
+blastn -query results/fasttree/amplicons/set_1-primer_pair95.amplicons.fasta -db ~/data/ncbi_refseq/refseq_mito_db -out results/blastn/set_1-primer_pair95.blast-hits.txt
+~~~
 
