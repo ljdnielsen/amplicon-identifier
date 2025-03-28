@@ -6,6 +6,7 @@ output_dir=$3
 for filename in $mitogenome_dir/*; do
     prefix=$(basename -- "${filename%.*}")
     echo indexing kmers of $prefix
+    mkdir -p $output_dir/kmers-by-species
     jellyfish count -m $kmer_size -s 100M -o $output_dir/kmers-by-species/$prefix.kmers.jf $mitogenome_dir/$prefix.fasta
     jellyfish dump -c $output_dir/kmers-by-species/$prefix.kmers.jf > $output_dir/kmers-by-species/$prefix.kmers.txt
 done
@@ -14,5 +15,6 @@ done
 for filename in $mitogenome_dir/*; do
     prefix=$(basename -- "${filename%.*}")
     echo sorting kmers of $prefix
+    mkdir -p $output_dir/sorted-kmers
     sort $output_dir/kmers-by-species/$prefix.kmers.txt > $output_dir/sorted-kmers/sorted.$prefix.kmers.txt
 done
