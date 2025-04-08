@@ -5,7 +5,7 @@ MITOGENOME_DIR="$1"  # Directory containing the mitogenome FASTA files
 REFERENCE_GENOME="$2"       # Reference genome
 
 # Initialize k-mer length
-K=20
+K=40
 
 while [ $K -ge 1 ]; do
     echo "Trying k-mer length: $K"

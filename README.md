@@ -143,3 +143,77 @@ python3 src/blast.py results/fasttree/amplicons/set_1-primer_pair95.amplicons.fa
 ~~~
 
 The resulting BLAST-hits can be seen in [results/blastn/results.blast](results/blastn/results.blast)
+
+## Testing the program with marsupial genomes only
+
+Next we assembled a set of mitogenomes for which we had tissue-derived DNA in the lab. This would allow us to test the primers designed with amplicon-identifier in vitro.
+
+|Species                    |DNA available |Mitogenome available |
+|---------------------------|--------------|---------------------|
+|*Wallabia bicolor*         |Yes           |[Yes](../../../data/mitogenomes/marsupials-only/wallabia-bicolor.fasta)|
+|*Pseudocheirus peregrinus* |Yes           |[Yes](../../../data/mitogenomes/marsupials-only/pseudocheirus-peregrinus.fasta)|
+|*Potorous longipes*        |Yes           |[Yes](../../../data/mitogenomes/marsupials-only/potorous-longipes.fasta)|
+|*Sminthopsis crassicaudata*|Yes           |[Yes](../../../data/mitogenomes/marsupials-only/sminthopsis-crassicaudata.fasta)|
+|*Thylacinus cynocephalus*  |Yes           |[Yes](../../../data/mitogenomes/marsupials-only/thylacinus-cynocephalus.fasta)
+
+A single fasta file containing the genomes were made using seqconverter
+
+~~~
+conda activate seqconverter
+seqconverter -I fasta -O fasta ~/data/mitogenomes/marsupials-only/potorous-longipes.fasta ~/data/mitogenomes/marsupials-only/pseudocheirus-peregrinus.fasta ~/data/mitogenomes/marsupials-only/sminthopsis-crassicaudata.fasta ~/data/mitogenomes/marsupials-only/wallabia-bicolor.fasta ~/data/mitogenomes/marsupials-only/thylacinus-cynocephalus.fasta > ~/data/mitogenomes/marsupials-only.fasta
+~~~
+
+### Identifying a set of conserved fragments
+
+Running 
+ - sort-kmers.sh
+ - find-conserved-kmers.sh
+ - combine-primers.py
+    
+in loop with incrementally shorter k-mers until a fragment of at least 200 bp can be amplified:
+
+~~~
+conda activate jellyfish
+bash src/find-kmer-length.sh ~/data/mitogenomes/marsupials-only ~/data/mitogenomes/marsupials-only/sminthopsis-crassicaudata.fasta
+~~~
+
+### Obtain amplicons from the effective primers
+
+~~~
+chmod +x src/generate-amplicons.sh
+bash src/generate-amplicons.sh ~/data/mitogenomes/marsupials-only.fasta
+~~~
+
+### Generate trees from the amplicons
+
+~~~
+conda activate fasttree
+bash src/generate-trees.sh ~/data/mitogenomes/marsupials-only.fasta results/fasttree/amplicons results/fasttree
+~~~
+
+### Compare Robinson-Foulds distance between amplicon trees and mitogenome tree
+
+~~~
+conda deactivate
+conda activate compare-rf
+python3 src/compare-rf.py results/fasttree/mitogenome_tree.nwk results/fasttree/amplicon_trees/
+~~~
+
+15 amplicon trees resulted in a Robinson-Foulds distance of 0. The mitogenome tree and the first of the amplicon trees with an RF Dist=0, primer_pair336.amplicons_tree.nwk, is shown below.
+
+![marsupials-only mitotree](results/fasttree/marsupials-only_mitotree.png)
+
+__Figure 7:__ Full mitogenome tree of the marsupial dataset.
+
+![primer_pair336 tree](results/fasttree/primer_pair336.amplicons_tree.png)
+
+__Figure 8:__ Amplicon tree from primer_pair336 of the marsupial dataset.
+
+### BLASTing the amplicons from the best tree against NCBI Nucleotide
+
+~~~
+python3 src/blast.py results/fasttree/amplicons/primer_pair336.amplicons.fasta results/blastn/
+~~~
+
+All the amplicons of primer_pari336 map to the expected species first, all with a 100% identity. The results can be found in [results/blastn/results.blast](results/blastn/results.blast).
+
